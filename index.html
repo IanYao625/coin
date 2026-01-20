@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅遊分帳大師</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        :root { --primary: #4dabf7; --secondary: #fab005; --bg: #f1f3f5; --card: #ffffff; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #343a40; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: var(--card); border-radius: 15px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        
+        /* 伸縮區塊 */
+        .collapsible-content { display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .toggle-btn { background: #e9ecef; border: none; width: 100%; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; color: #495057; }
+        
+        /* 表單樣式 */
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #dee2e6; border-radius: 8px; box-sizing: border-box; }
+        .member-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+        .member-checkbox { display: flex; align-items: center; gap: 5px; background: #f8f9fa; padding: 8px; border-radius: 5px; }
+        
+        /* 帳單清單 */
+        .bill-item { border-bottom: 1px solid #eee; padding: 12px 0; }
+        .bill-info { display: flex; justify-content: space-between; align-items: flex-start; }
+        .bill-desc { font-weight: bold; }
+        .bill-meta { font-size: 0.8rem; color: #868e96; }
+        
+        /* 結算樣式 */
+        .settlement-item { background: #e7f5ff; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
+        .arrow { color: var(--primary); font-weight: bold; }
+
+        button.primary-btn { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 1rem; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h1>✈️ 出國分帳大師</h1>
+        <div style="display: flex; gap: 10px;">
+            <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:10px; text-align:center;">
+                <small>總支出 (TWD)</small>
+                <div id="totalSpend" style="font-size:1.2rem; font-weight:bold; color:var(--primary)">$0</div>
+            </div>
+            <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:10px; text-align:center;">
+                <small>成員人數</small>
+                <div id="memberCount" style="font-size:1.2rem; font-weight:bold;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <button class="toggle-btn" onclick="toggleSection('memberSection')">👥 成員與匯率管理 ▼</button>
+        <div id="memberSection" class="collapsible-content">
+            <label>成員名稱 (空格分隔):</label>
+            <input type="text" id="memberInput" placeholder="例如: 小明 大強 寶貝" onchange="updateMembers()">
+            <label>匯率設定 (1 外幣 = ? 台幣):</label>
+            <input type="number" id="rateInput" value="0.21" step="0.001" onchange="saveConfig()">
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>➕ 新增開銷紀錄</h2>
+        <label>支出項目:</label>
+        <input type="text" id="billDesc" placeholder="例如: 一蘭拉麵">
+        
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1;">
+                <label>金額:</label>
+                <input type="number" id="billAmount" placeholder="0">
+            </div>
+            <div style="flex:1;">
+                <label>幣值:</label>
+                <select id="billCurrency">
+                    <option value="TWD">TWD (台幣)</option>
+                    <option value="FOREIGN">外幣 (按匯率)</option>
+                </select>
+            </div>
+        </div>
+
+        <label>誰付的錢?</label>
+        <select id="billPayer"></select>
+
+        <label>誰要分攤?</label>
+        <div id="splitMemberGrid" class="member-grid"></div>
+
+        <button class="primary-btn" onclick="addBill()">📥 紀錄這筆帳</button>
+    </div>
+
+    <div class="card">
+        <h2>📊 誰該給誰多少? (結算)</h2>
+        <div id="settlementList"></div>
+    </div>
+
+    <div class="card">
+        <button class="toggle-btn" onclick="toggleSection('historySection')">📜 歷史帳單明細 ▼</button>
+        <div id="historySection" class="collapsible-content">
+            <div id="billHistory"></div>
+            <button onclick="clearAllData()" style="background:none; color:red; font-size:0.8rem; margin-top:20px; border:none; width:100%;">⚠️ 清空所有旅程資料</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Firebase 設定
+    const firebaseConfig = {
+        apiKey: "AIzaSyA0ihW3ZPIrEHLPay1_psV_qrUn9jqAtuU",
+        authDomain: "babyhan-11286.firebaseapp.com",
+        databaseURL: "https://babyhan-11286-default-rtdb.firebaseio.com",
+        projectId: "babyhan-11286",
+        storageBucket: "babyhan-11286.firebasestorage.app",
+        messagingSenderId: "972062726412",
+        appId: "1:972062726412:web:ef33e8cfb60305f388d129"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref('travelSplit_V1');
+
+    let state = {
+        members: [],
+        rate: 0.21,
+        bills: []
+    };
+
+    db.on('value', (s) => {
+        if(s.val()) {
+            state = s.val();
+            if(!state.bills) state.bills = [];
+            renderUI();
+        }
+    });
+
+    function renderUI() {
+        // 更新匯率與成員輸入框
+        document.getElementById('rateInput').value = state.rate;
+        document.getElementById('memberInput').value = state.members.join(' ');
+        document.getElementById('memberCount').innerText = state.members.length;
+
+        // 更新付款人下拉選單
+        const payerSelect = document.getElementById('billPayer');
+        payerSelect.innerHTML = state.members.map(m => `<option value="${m}">${m}</option>`).join('');
+
+        // 更新分攤成員勾選區
+        const grid = document.getElementById('splitMemberGrid');
+        grid.innerHTML = state.members.map(m => `
+            <div class="member-checkbox">
+                <input type="checkbox" name="splitMember" value="${m}" checked> ${m}
+            </div>
+        `).join('');
+
+        // 計算與渲染歷史帳單
+        let totalTWD = 0;
+        const historyDiv = document.getElementById('billHistory');
+        historyDiv.innerHTML = state.bills.map((b, idx) => {
+            const amt = b.currency === 'FOREIGN' ? b.amount * state.rate : b.amount;
+            totalTWD += amt;
+            return `
+                <div class="bill-item">
+                    <div class="bill-info">
+                        <div>
+                            <div class="bill-desc">${b.desc}</div>
+                            <div class="bill-meta">${b.payer} 先付 | ${b.splitBetween.length} 人分攤</div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-weight:bold">$${Math.round(amt)} TWD</div>
+                            <div class="bill-meta">${b.amount} ${b.currency==='TWD'?'元':'外幣'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).reverse().join('');
+        document.getElementById('totalSpend').innerText = `$${Math.round(totalTWD)}`;
+
+        calculateSettlement();
+    }
+
+    function calculateSettlement() {
+        const balances = {};
+        state.members.forEach(m => balances[m] = 0);
+
+        state.bills.forEach(b => {
+            const amt = b.currency === 'FOREIGN' ? b.amount * state.rate : b.amount;
+            // 付錢的人餘額增加 (別人欠他)
+            balances[b.payer] += amt;
+            // 分攤的人餘額減少 (他欠別人)
+            const share = amt / b.splitBetween.length;
+            b.splitBetween.forEach(m => {
+                balances[m] -= share;
+            });
+        });
+
+        // 債務簡化演算法 (誰該給誰多少)
+        const creditors = [];
+        const debtors = [];
+        for (let m in balances) {
+            if (balances[m] > 1) creditors.push({name: m, amt: balances[m]});
+            else if (balances[m] < -1) debtors.push({name: m, amt: Math.abs(balances[m])});
+        }
+
+        const settlementList = document.getElementById('settlementList');
+        settlementList.innerHTML = '';
+        
+        debtors.forEach(d => {
+            creditors.forEach(c => {
+                if (d.amt > 0 && c.amt > 0) {
+                    const pay = Math.min(d.amt, c.amt);
+                    if(pay > 0.5) {
+                        settlementList.innerHTML += `
+                            <div class="settlement-item">
+                                <span><b>${d.name}</b></span>
+                                <span class="arrow">應支付 ${Math.round(pay)} 元 ➔</span>
+                                <span><b>${c.name}</b></span>
+                            </div>
+                        `;
+                    }
+                    d.amt -= pay;
+                    c.amt -= pay;
+                }
+            });
+        });
+        if(settlementList.innerHTML === '') settlementList.innerHTML = '<div style="text-align:center; color:#adb5bd;">目前帳目平衡</div>';
+    }
+
+    function addBill() {
+        const desc = document.getElementById('billDesc').value;
+        const amount = parseFloat(document.getElementById('billAmount').value);
+        const currency = document.getElementById('billCurrency').value;
+        const payer = document.getElementById('billPayer').value;
+        const splitBetween = Array.from(document.querySelectorAll('input[name="splitMember"]:checked')).map(el => el.value);
+
+        if(!desc || !amount || splitBetween.length === 0) return alert("請填寫完整資訊！");
+
+        const newBill = { desc, amount, currency, payer, splitBetween, time: Date.now() };
+        if(!state.bills) state.bills = [];
+        state.bills.push(newBill);
+        db.set(state);
+        
+        // 清空欄位
+        document.getElementById('billDesc').value = '';
+        document.getElementById('billAmount').value = '';
+    }
+
+    function updateMembers() {
+        const val = document.getElementById('memberInput').value;
+        state.members = val.split(/\s+/).filter(m => m !== "");
+        db.set(state);
+    }
+
+    function saveConfig() {
+        state.rate = parseFloat(document.getElementById('rateInput').value);
+        db.set(state);
+    }
+
+    function toggleSection(id) {
+        const el = document.getElementById(id);
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function clearAllData() {
+        if(confirm("確定要刪除這趟旅程的所有帳單嗎？不可復原喔！")) {
+            state.bills = [];
+            db.set(state);
+        }
+    }
+</script>
+</body>
+</html>
