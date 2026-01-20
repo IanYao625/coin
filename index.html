@@ -3,268 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>旅遊分帳大師</title>
+    <title>Yao旅遊記帳</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #4dabf7; --secondary: #fab005; --bg: #f1f3f5; --card: #ffffff; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #343a40; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .card { background: var(--card); border-radius: 15px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2 { margin-top: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
-        
-        /* 伸縮區塊 */
-        .collapsible-content { display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
-        .toggle-btn { background: #e9ecef; border: none; width: 100%; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; color: #495057; }
-        
-        /* 表單樣式 */
-        label { display: block; margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
-        input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #dee2e6; border-radius: 8px; box-sizing: border-box; }
-        .member-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
-        .member-checkbox { display: flex; align-items: center; gap: 5px; background: #f8f9fa; padding: 8px; border-radius: 5px; }
-        
-        /* 帳單清單 */
-        .bill-item { border-bottom: 1px solid #eee; padding: 12px 0; }
-        .bill-info { display: flex; justify-content: space-between; align-items: flex-start; }
-        .bill-desc { font-weight: bold; }
-        .bill-meta { font-size: 0.8rem; color: #868e96; }
-        
-        /* 結算樣式 */
-        .settlement-item { background: #e7f5ff; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
-        .arrow { color: var(--primary); font-weight: bold; }
-
-        button.primary-btn { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-size: 1rem; font-weight: bold; margin-top: 10px; }
+        :root { --primary: #228be6; --success: #40c057; --danger: #fa5252; --gray: #adb5bd; --bg-overlay: rgba(255, 255, 255, 0.9); }
+        body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; padding-bottom: 100px; color: #495057; 
+               background: url('https://www.ourchinastory.com/images/cover/travel-leisure/2021/12/horizon/1466367375685521408.jpg') center/cover fixed; transition: 0.3s; }
+        .container { max-width: 500px; margin: 0 auto; padding: 15px; }
+        .card { background: var(--bg-overlay); backdrop-filter: blur(15px); border-radius: 24px; padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.4); }
+        .notice-card { background: #fff9db !important; border-left: 6px solid #fab005 !important; border-radius: 18px; padding: 15px; margin-top: 10px; }
+        .trip-title { font-size: 1.6rem; font-weight: 900; color: #1c7ed6; border: none; background: none; width: 100%; text-align: center; outline: none; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e9ecef; border-radius: 14px; background: #fff; font-size: 1rem; box-sizing: border-box; }
+        .grid-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+        .check-item { background: #fff; padding: 12px; border-radius: 16px; border: 1px solid #eee; display: flex; align-items: center; cursor: pointer; transition: 0.2s; position: relative; }
+        .check-item input[type="checkbox"] { width: 18px; height: 18px; margin-right: 10px; pointer-events: none; }
+        .payer-input { width: 80px !important; padding: 5px !important; margin: 0 0 0 5px !important; font-size: 0.85rem !important; border-radius: 8px !important; text-align: right; }
+        .primary-btn { background: linear-gradient(135deg, #4dabf7, #228be6); color: white; border: none; width: 100%; padding: 16px; border-radius: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .bottom-nav { position: fixed; bottom: 20px; left: 20px; right: 20px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); display: flex; justify-content: space-around; padding: 12px; border-radius: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 100; }
+        .nav-item { color: var(--gray); font-size: 0.75rem; text-align: center; flex: 1; cursor: pointer; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .page { display: none; } .page.active { display: block; }
+        .bill-card { background: white; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #f1f3f5; }
+        .btn-sm { padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; border: none; cursor: pointer; }
+        /* 標籤間距優化 */
+        .badge { background: #f1f3f5; color: #495057; padding: 8px 14px; border-radius: 12px; font-size: 0.9rem; margin: 6px 4px; display: inline-block; border: 1px solid #e9ecef; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="card">
-        <h1>✈️ 出國分帳大師</h1>
-        <div style="display: flex; gap: 10px;">
-            <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:10px; text-align:center;">
-                <small>總支出 (TWD)</small>
-                <div id="totalSpend" style="font-size:1.2rem; font-weight:bold; color:var(--primary)">$0</div>
-            </div>
-            <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:10px; text-align:center;">
-                <small>成員人數</small>
-                <div id="memberCount" style="font-size:1.2rem; font-weight:bold;">0</div>
-            </div>
+    <div class="card" style="text-align:center;">
+        <input type="text" id="tripTitle" class="trip-title" placeholder="旅程名稱" onchange="updateTripTitle(this.value)">
+        <div id="tripCurrencyBadge" style="font-weight:bold; color:var(--primary); margin-top:5px;"></div>
+        <div class="notice-card"><textarea id="noticeContent" style="background:transparent; border:none; width:100%; height:45px; resize:none; outline:none;" placeholder="記錄飯店、交通等重要資訊..." onchange="updateNotice(this.value)"></textarea></div>
+    </div>
+
+    <div id="page-add" class="page active">
+        <div class="card">
+            <h3>✍️ 記一筆花費 (<span id="currentCurrencyLabel"></span>)</h3>
+            <input type="text" id="billDesc" placeholder="吃了什麼、買了什麼？">
+            <input type="number" id="billAmount" placeholder="輸入總金額">
+            <label style="font-weight:bold; color:var(--primary);">💰 誰出的錢？</label>
+            <span style="font-size:0.75rem; color:var(--primary); cursor:pointer; float:right;" onclick="togglePayerMode()">[多人代墊模式]</span>
+            <div id="singlePayerArea"><select id="billPayerSelect"></select></div>
+            <div id="multiPayerArea" style="display:none;" class="grid-box"></div>
+            <label style="display:block; margin-top:15px; font-weight:bold; color:var(--primary);">👥 誰分攤？</label>
+            <div style="margin-bottom:8px;"><button onclick="ui.toggleAllSplit(true)" class="btn-sm">全選</button><button onclick="ui.toggleAllSplit(false)" class="btn-sm">取消</button></div>
+            <div id="splitCheckboxes" class="grid-box"></div>
+            <button class="primary-btn" onclick="api.addBill()">確認記帳 📥</button>
         </div>
     </div>
 
-    <div class="card">
-        <button class="toggle-btn" onclick="toggleSection('memberSection')">👥 成員與匯率管理 ▼</button>
-        <div id="memberSection" class="collapsible-content">
-            <label>成員名稱 (空格分隔):</label>
-            <input type="text" id="memberInput" placeholder="例如: 小明 大強 寶貝" onchange="updateMembers()">
-            <label>匯率設定 (1 外幣 = ? 台幣):</label>
-            <input type="number" id="rateInput" value="0.21" step="0.001" onchange="saveConfig()">
+    <div id="page-history" class="page">
+        <div class="card"><h3>📜 旅程明細</h3><div id="historyList"></div></div>
+    </div>
+
+    <div id="page-settle" class="page">
+        <div class="card">
+            <h3 style="text-align:center;">📊 支出佔比 (<span id="chartCurLabel"></span>)</h3>
+            <div style="width:70%; margin:0 auto;"><canvas id="spendChart"></canvas></div>
         </div>
+        <div class="card"><h3>💸 結算方案</h3><div id="settlementResult"></div></div>
     </div>
 
-    <div class="card">
-        <h2>➕ 新增開銷紀錄</h2>
-        <label>支出項目:</label>
-        <input type="text" id="billDesc" placeholder="例如: 一蘭拉麵">
-        
-        <div style="display:flex; gap:10px;">
-            <div style="flex:1;">
-                <label>金額:</label>
-                <input type="number" id="billAmount" placeholder="0">
-            </div>
-            <div style="flex:1;">
-                <label>幣值:</label>
-                <select id="billCurrency">
-                    <option value="TWD">TWD (台幣)</option>
-                    <option value="FOREIGN">外幣 (按匯率)</option>
-                </select>
-            </div>
+    <div id="page-manage" class="page">
+        <div class="card">
+            <h3>👥 旅伴管理</h3>
+            <div style="display:flex; gap:10px;"><input type="text" id="newMemberName" placeholder="名字"><button onclick="api.addMember()" class="btn-sm" style="background:var(--success); color:white;">新增</button></div>
+            <div id="memberList" style="margin-top:12px;"></div>
         </div>
-
-        <label>誰付的錢?</label>
-        <select id="billPayer"></select>
-
-        <label>誰要分攤?</label>
-        <div id="splitMemberGrid" class="member-grid"></div>
-
-        <button class="primary-btn" onclick="addBill()">📥 紀錄這筆帳</button>
-    </div>
-
-    <div class="card">
-        <h2>📊 誰該給誰多少? (結算)</h2>
-        <div id="settlementList"></div>
-    </div>
-
-    <div class="card">
-        <button class="toggle-btn" onclick="toggleSection('historySection')">📜 歷史帳單明細 ▼</button>
-        <div id="historySection" class="collapsible-content">
-            <div id="billHistory"></div>
-            <button onclick="clearAllData()" style="background:none; color:red; font-size:0.8rem; margin-top:20px; border:none; width:100%;">⚠️ 清空所有旅程資料</button>
+        <div class="card"><h3>📂 歷史檔案庫</h3><div id="archiveList"></div><button onclick="ui.showNewTripModal()" class="primary-btn" style="background:#495057;">🆕 開啟新旅程</button></div>
+        <div class="card" style="border:1px dashed #ccc;">
+            <button onclick="ui.showAdmin()" style="background:none; border:none; color:var(--gray); cursor:pointer; width:100%;">🛠️ 進階系統設定</button>
+            <div id="adminPanel" style="display:none; margin-top:10px;">
+                <input type="password" id="adminPassInput" placeholder="管理密碼"><button onclick="api.verifyAdmin()" class="btn-sm" style="background:var(--primary); color:white; width:100%;">驗證</button>
+                <div id="adminControls" style="display:none; margin-top:15px;">
+                    <label>背景圖 URL：</label><input type="text" id="bgUrlInput" onchange="api.updateBg(this.value)">
+                    <button onclick="api.updateAdminConfig()" class="btn-sm" style="background:var(--primary); color:white; width:100%;">儲存變更</button>
+                    <hr><h4>💰 系統可用幣別</h4><div id="currencyList"></div>
+                    <div style="display:flex; gap:5px;"><input type="text" id="newCurName"><button onclick="api.addCurrency()" class="btn-sm">新增</button></div>
+                    <hr><button onclick="api.resetSystem()" style="background:#fff5f5; color:red; border:1px solid red; width:100%; padding:10px; border-radius:10px;">🔥 初始化資料</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<nav class="bottom-nav">
+    <div class="nav-item active" onclick="ui.switchPage('add', this)">✍️<br>記帳</div>
+    <div class="nav-item" onclick="ui.switchPage('history', this)">📜<br>明細</div>
+    <div class="nav-item" onclick="ui.switchPage('settle', this)">📊<br>結算</div>
+    <div class="nav-item" onclick="ui.switchPage('manage', this)">⚙️<br>管理</div>
+</nav>
+
 <script>
-    // Firebase 設定
-    const firebaseConfig = {
-        apiKey: "AIzaSyA0ihW3ZPIrEHLPay1_psV_qrUn9jqAtuU",
-        authDomain: "babyhan-11286.firebaseapp.com",
-        databaseURL: "https://babyhan-11286-default-rtdb.firebaseio.com",
-        projectId: "babyhan-11286",
-        storageBucket: "babyhan-11286.firebasestorage.app",
-        messagingSenderId: "972062726412",
-        appId: "1:972062726412:web:ef33e8cfb60305f388d129"
-    };
+    const firebaseConfig = { apiKey: "AIzaSyA0ihW3ZPIrEHLPay1_psV_qrUn9jqAtuU", authDomain: "babyhan-11286.firebaseapp.com", databaseURL: "https://babyhan-11286-default-rtdb.firebaseio.com", projectId: "babyhan-11286" };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database().ref('travelSplit_V1');
+    const db = firebase.database();
+    const DATA_ROOT = 'travelSystem_V11';
+    const flags = { "TWD": "TWD 🇹🇼", "JPY": "JPY 🇯🇵", "KRW": "KRW 🇰🇷", "USD": "USD 🇺🇸", "VND": "VND 👑", "HKD": "HKD 🇭🇰" };
+    
+    let currentTripId = "default", state = { title: "", members: [], bills: [], notice: "", tripCurrency: "TWD" }, 
+        sysConfig = { bgUrl: "", currencies: ["TWD", "JPY", "KRW"], adminPass: "0000", passHint: "0000" },
+        isMultiPayer = false, chartInstance = null;
 
-    let state = {
-        members: [],
-        rate: 0.21,
-        bills: []
+    function handleBoxClick(e) { if(e.target.tagName === 'INPUT') return; const chk = e.currentTarget.querySelector('input[type="checkbox"]'); if(chk) chk.checked = !chk.checked; }
+
+    const api = {
+        addBill: () => {
+            const desc = document.getElementById('billDesc').value, amount = parseFloat(document.getElementById('billAmount').value);
+            if(!desc || isNaN(amount)) return alert("請輸入完整資訊！");
+            let payers = {};
+            if(!isMultiPayer) {
+                payers[document.getElementById('billPayerSelect').value] = amount;
+            } else {
+                let total = 0;
+                document.querySelectorAll('.payer-row').forEach(row => {
+                    const chk = row.querySelector('input[type="checkbox"]');
+                    const val = parseFloat(row.querySelector('.payer-input').value) || 0;
+                    if(chk.checked && val > 0) { payers[chk.value] = val; total += val; }
+                });
+                if(Math.abs(total - amount) > 0.1) return alert("代付總額不符！");
+            }
+            const splitBetween = Array.from(document.querySelectorAll('input[name="sMember"]:checked')).map(el => el.value);
+            if(Object.keys(payers).length === 0 || splitBetween.length === 0) return alert("要勾選人員！");
+            state.bills.push({ desc, amount, currency: state.tripCurrency, payers, splitBetween, time: `${new Date().getMonth()+1}/${new Date().getDate()} ${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,'0')}` });
+            api.saveState();
+            document.getElementById('billDesc').value = ''; document.getElementById('billAmount').value = '';
+        },
+        clearDebt: (f, t, a) => {
+            if(confirm(`確認結清 ${a}？`)) {
+                let p = {}; p[f] = a;
+                state.bills.push({ desc: `✅ 結清 (${f}➔${t})`, amount: a, currency: state.tripCurrency, payers: p, splitBetween: [t], time: "剛剛" });
+                api.saveState();
+            }
+        },
+        saveState: () => db.ref(`${DATA_ROOT}/trips/${currentTripId}`).set(state),
+        saveConfig: () => db.ref(`${DATA_ROOT}/config`).set(sysConfig),
+        addMember: () => { const n = document.getElementById('newMemberName').value.trim(); if(n) { state.members.push(n); api.saveState(); document.getElementById('newMemberName').value=''; } },
+        removeMember: (i) => { if(confirm("移除旅伴？")) { state.members.splice(i,1); api.saveState(); } },
+        addCurrency: () => { const n = document.getElementById('newCurName').value.trim().toUpperCase(); if(n && !sysConfig.currencies.includes(n)) { sysConfig.currencies.push(n); api.saveConfig(); } },
+        removeCurrency: (k) => { if(confirm(`不使用 ${k}？`)) { sysConfig.currencies = sysConfig.currencies.filter(c => c !== k); api.saveConfig(); } },
+        verifyAdmin: () => { if(document.getElementById('adminPassInput').value === sysConfig.adminPass) document.getElementById('adminControls').style.display = 'block'; else alert("密碼錯誤！"); },
+        updateAdminConfig: () => { api.saveConfig(); alert("已儲存！"); },
+        deleteTripArchive: (id) => { if(confirm("刪除歷史？")) { db.ref(`${DATA_ROOT}/archives/${id}`).remove(); db.ref(`${DATA_ROOT}/trips/${id}`).remove(); } },
+        resetSystem: () => { if(confirm("🔥 確定初始化？")) db.ref(DATA_ROOT).remove().then(()=>location.reload()); },
+        updateBg: (url) => { sysConfig.bgUrl = url; api.saveConfig(); }
     };
 
-    db.on('value', (s) => {
-        if(s.val()) {
-            state = s.val();
-            if(!state.bills) state.bills = [];
-            renderUI();
-        }
+    const ui = {
+        render: (archives) => {
+            document.getElementById('tripTitle').value = state.title;
+            document.getElementById('noticeContent').value = state.notice || "";
+            document.getElementById('tripCurrencyBadge').innerHTML = `🌍 結算幣種：${flags[state.tripCurrency] || state.tripCurrency}`;
+            document.getElementById('currentCurrencyLabel').innerText = state.tripCurrency;
+            document.getElementById('chartCurLabel').innerText = state.tripCurrency;
+            document.body.style.backgroundImage = `url('${sysConfig.bgUrl}')`;
+            document.getElementById('billPayerSelect').innerHTML = (state.members || []).map(m => `<option value="${m}">${m}</option>`).join('');
+            document.getElementById('multiPayerArea').innerHTML = (state.members || []).map(m => `
+                <div class="check-item payer-row" onclick="handleBoxClick(event)">
+                    <input type="checkbox" value="${m}">
+                    <span>${m}</span>
+                    <input type="number" class="payer-input" placeholder="代付" onclick="event.stopPropagation()">
+                </div>`).join('');
+            document.getElementById('splitCheckboxes').innerHTML = (state.members || []).map(m => `<div class="check-item" onclick="handleBoxClick(event)"><input type="checkbox" name="sMember" value="${m}" checked><span>${m}</span></div>`).join('');
+            document.getElementById('memberList').innerHTML = (state.members || []).map((m, i) => `<span class="badge">${m} <small onclick="api.removeMember(${i})" style="color:red; cursor:pointer;">×</small></span>`).join('');
+            document.getElementById('historyList').innerHTML = (state.bills || []).slice().reverse().map((b, i) => {
+                const idx = state.bills.length - 1 - i;
+                return `<div class="bill-card">
+                    <div style="display:flex; justify-content:space-between;">
+                        <div><b>${b.desc}</b><br><small>代墊：${Object.entries(b.payers).map(([n,v])=>`${n}(${v})`).join(',')}</small></div>
+                        <div style="text-align:right"><b>${b.amount} ${b.currency}</b><br>
+                        <button class="btn-sm" onclick="ui.editBill(${idx})">📝</button>
+                        <button class="btn-sm" style="color:red;" onclick="ui.deleteBill(${idx})">🗑️</button></div>
+                    </div>
+                </div>`}).join('');
+            document.getElementById('archiveList').innerHTML = Object.keys(archives).map(id => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff; border-radius:14px; margin-bottom:8px;">
+                    <span><b>${archives[id]}</b></span>
+                    <div><button onclick="api.loadTrip('${id}')" class="btn-sm" style="background:var(--primary); color:white;">載入</button>
+                    <button onclick="api.deleteTripArchive('${id}')" class="btn-sm" style="color:var(--danger); background:none;">🗑️</button></div>
+                </div>`).join('');
+            document.getElementById('currencyList').innerHTML = sysConfig.currencies.map(k => `<div style="display:flex; justify-content:space-between;"><span>${flags[k]||k}</span><button onclick="api.removeCurrency('${k}')" style="color:red; border:none; background:none;">[刪除]</button></div>`).join('');
+        },
+        showNewTripModal: () => {
+            const name = prompt("旅程名稱："); if(!name) return;
+            const cur = prompt(`幣種代碼 (${sysConfig.currencies.join(", ")})：`, "TWD").toUpperCase();
+            if(!sysConfig.currencies.includes(cur)) return alert("請先在後台新增該幣種！");
+            const id = "trip_" + Date.now();
+            db.ref(`${DATA_ROOT}/currentTripId`).set(id);
+            db.ref(`${DATA_ROOT}/archives/${id}`).set(name);
+            db.ref(`${DATA_ROOT}/trips/${id}`).set({ title: name, members: [], bills: [], notice: "", tripCurrency: cur });
+        },
+        toggleAllSplit: (v) => document.querySelectorAll('input[name="sMember"]').forEach(c => c.checked = v),
+        switchPage: (p, el) => {
+            document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+            document.getElementById('page-'+p).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); el.classList.add('active');
+            if(p === 'settle') ui.calculateSettlement();
+        },
+        calculateSettlement: () => {
+            const res = document.getElementById('settlementResult'); res.innerHTML = '';
+            const chartData = {}; state.members.forEach(m => chartData[m] = 0);
+            const balances = {}; state.members.forEach(m => balances[m] = 0);
+            (state.bills || []).forEach(b => {
+                const sAmt = b.amount / b.splitBetween.length;
+                for(let p in b.payers) { balances[p] += b.payers[p]; }
+                b.splitBetween.forEach(m => { balances[m] -= sAmt; if(!b.desc.includes("✅ 結清")) chartData[m] += sAmt; });
+            });
+            let creditors = [], debtors = [];
+            for (let m in balances) { if (balances[m] > 0.01) creditors.push({n: m, a: balances[m]}); else if (balances[m] < -0.01) debtors.push({n: m, a: Math.abs(balances[m])}); }
+            debtors.forEach(d => creditors.forEach(c => {
+                let pay = Math.min(d.a, c.a);
+                if(pay > 0.01) {
+                    res.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;"><span>${d.n} ➔ ${c.n} <b>${pay.toFixed(2)}</b></span><button class="btn-sm" style="background:var(--success); color:white;" onclick="api.clearDebt('${d.n}','${c.n}',${pay.toFixed(2)})">結清</button></div>`;
+                    d.a -= pay; c.a -= pay;
+                }
+            }));
+            ui.updateChart(chartData);
+        },
+        updateChart: (data) => {
+            const ctx = document.getElementById('spendChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, { type: 'pie', data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#ff6b6b', '#4dabf7', '#63e6be', '#fab005', '#94d82d', '#7950f2'] }] } });
+        },
+        editBill: (i) => {
+            const b = state.bills[i];
+            const newAmt = prompt(`正在編輯「${b.desc}」的金額\n目前為：${b.amount}`, b.amount);
+            if(newAmt && !isNaN(newAmt)) {
+                const updatedAmt = Number(parseFloat(newAmt).toFixed(2));
+                if(Object.keys(b.payers).length > 1) { alert("多人付款建議刪除重記。"); return; }
+                b.payers[Object.keys(b.payers)[0]] = updatedAmt;
+                b.amount = updatedAmt;
+                api.saveState();
+            }
+        },
+        deleteBill: (i) => { if(confirm("刪除此帳目？")) { state.bills.splice(i,1); api.saveState(); } },
+        showAdmin: () => { const p = document.getElementById('adminPanel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; }
+    };
+
+    db.ref(DATA_ROOT).on('value', (s) => {
+        const val = s.val() || {}; currentTripId = val.currentTripId || "default";
+        if(val.config) sysConfig = { ...sysConfig, ...val.config };
+        state = (val.trips && val.trips[currentTripId]) ? val.trips[currentTripId] : { title: "", members: [], bills: [], notice: "", tripCurrency: "TWD" };
+        if(!state.bills) state.bills = []; if(!state.members) state.members = [];
+        ui.render(val.archives || {});
     });
 
-    function renderUI() {
-        // 更新匯率與成員輸入框
-        document.getElementById('rateInput').value = state.rate;
-        document.getElementById('memberInput').value = state.members.join(' ');
-        document.getElementById('memberCount').innerText = state.members.length;
-
-        // 更新付款人下拉選單
-        const payerSelect = document.getElementById('billPayer');
-        payerSelect.innerHTML = state.members.map(m => `<option value="${m}">${m}</option>`).join('');
-
-        // 更新分攤成員勾選區
-        const grid = document.getElementById('splitMemberGrid');
-        grid.innerHTML = state.members.map(m => `
-            <div class="member-checkbox">
-                <input type="checkbox" name="splitMember" value="${m}" checked> ${m}
-            </div>
-        `).join('');
-
-        // 計算與渲染歷史帳單
-        let totalTWD = 0;
-        const historyDiv = document.getElementById('billHistory');
-        historyDiv.innerHTML = state.bills.map((b, idx) => {
-            const amt = b.currency === 'FOREIGN' ? b.amount * state.rate : b.amount;
-            totalTWD += amt;
-            return `
-                <div class="bill-item">
-                    <div class="bill-info">
-                        <div>
-                            <div class="bill-desc">${b.desc}</div>
-                            <div class="bill-meta">${b.payer} 先付 | ${b.splitBetween.length} 人分攤</div>
-                        </div>
-                        <div style="text-align:right">
-                            <div style="font-weight:bold">$${Math.round(amt)} TWD</div>
-                            <div class="bill-meta">${b.amount} ${b.currency==='TWD'?'元':'外幣'}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).reverse().join('');
-        document.getElementById('totalSpend').innerText = `$${Math.round(totalTWD)}`;
-
-        calculateSettlement();
-    }
-
-    function calculateSettlement() {
-        const balances = {};
-        state.members.forEach(m => balances[m] = 0);
-
-        state.bills.forEach(b => {
-            const amt = b.currency === 'FOREIGN' ? b.amount * state.rate : b.amount;
-            // 付錢的人餘額增加 (別人欠他)
-            balances[b.payer] += amt;
-            // 分攤的人餘額減少 (他欠別人)
-            const share = amt / b.splitBetween.length;
-            b.splitBetween.forEach(m => {
-                balances[m] -= share;
-            });
-        });
-
-        // 債務簡化演算法 (誰該給誰多少)
-        const creditors = [];
-        const debtors = [];
-        for (let m in balances) {
-            if (balances[m] > 1) creditors.push({name: m, amt: balances[m]});
-            else if (balances[m] < -1) debtors.push({name: m, amt: Math.abs(balances[m])});
-        }
-
-        const settlementList = document.getElementById('settlementList');
-        settlementList.innerHTML = '';
-        
-        debtors.forEach(d => {
-            creditors.forEach(c => {
-                if (d.amt > 0 && c.amt > 0) {
-                    const pay = Math.min(d.amt, c.amt);
-                    if(pay > 0.5) {
-                        settlementList.innerHTML += `
-                            <div class="settlement-item">
-                                <span><b>${d.name}</b></span>
-                                <span class="arrow">應支付 ${Math.round(pay)} 元 ➔</span>
-                                <span><b>${c.name}</b></span>
-                            </div>
-                        `;
-                    }
-                    d.amt -= pay;
-                    c.amt -= pay;
-                }
-            });
-        });
-        if(settlementList.innerHTML === '') settlementList.innerHTML = '<div style="text-align:center; color:#adb5bd;">目前帳目平衡</div>';
-    }
-
-    function addBill() {
-        const desc = document.getElementById('billDesc').value;
-        const amount = parseFloat(document.getElementById('billAmount').value);
-        const currency = document.getElementById('billCurrency').value;
-        const payer = document.getElementById('billPayer').value;
-        const splitBetween = Array.from(document.querySelectorAll('input[name="splitMember"]:checked')).map(el => el.value);
-
-        if(!desc || !amount || splitBetween.length === 0) return alert("請填寫完整資訊！");
-
-        const newBill = { desc, amount, currency, payer, splitBetween, time: Date.now() };
-        if(!state.bills) state.bills = [];
-        state.bills.push(newBill);
-        db.set(state);
-        
-        // 清空欄位
-        document.getElementById('billDesc').value = '';
-        document.getElementById('billAmount').value = '';
-    }
-
-    function updateMembers() {
-        const val = document.getElementById('memberInput').value;
-        state.members = val.split(/\s+/).filter(m => m !== "");
-        db.set(state);
-    }
-
-    function saveConfig() {
-        state.rate = parseFloat(document.getElementById('rateInput').value);
-        db.set(state);
-    }
-
-    function toggleSection(id) {
-        const el = document.getElementById(id);
-        el.style.display = el.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function clearAllData() {
-        if(confirm("確定要刪除這趟旅程的所有帳單嗎？不可復原喔！")) {
-            state.bills = [];
-            db.set(state);
-        }
-    }
+    function togglePayerMode() { isMultiPayer = !isMultiPayer; document.getElementById('singlePayerArea').style.display = isMultiPayer ? 'none' : 'block'; document.getElementById('multiPayerArea').style.display = isMultiPayer ? 'grid' : 'none'; }
+    function updateTripTitle(v) { state.title = v; db.ref(`${DATA_ROOT}/archives/${currentTripId}`).set(v); api.saveState(); }
+    function updateNotice(v) { state.notice = v; api.saveState(); }
+    api.loadTrip = (id) => db.ref(`${DATA_ROOT}/currentTripId`).set(id);
 </script>
 </body>
 </html>
