@@ -27,8 +27,7 @@
         .page { display: none; } .page.active { display: block; }
         .bill-card { background: white; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #f1f3f5; }
         .btn-sm { padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; border: none; cursor: pointer; }
-        /* 標籤間距優化 */
-        .badge { background: #f1f3f5; color: #495057; padding: 8px 14px; border-radius: 12px; font-size: 0.9rem; margin: 6px 4px; display: inline-block; border: 1px solid #e9ecef; }
+        .badge { background: #f1f3f5; color: #495057; padding: 10px 16px; border-radius: 14px; font-size: 0.9rem; margin: 8px 6px; display: inline-block; border: 1px solid #e9ecef; }
     </style>
 </head>
 <body>
@@ -75,16 +74,27 @@
             <div id="memberList" style="margin-top:12px;"></div>
         </div>
         <div class="card"><h3>📂 歷史檔案庫</h3><div id="archiveList"></div><button onclick="ui.showNewTripModal()" class="primary-btn" style="background:#495057;">🆕 開啟新旅程</button></div>
+        
         <div class="card" style="border:1px dashed #ccc;">
             <button onclick="ui.showAdmin()" style="background:none; border:none; color:var(--gray); cursor:pointer; width:100%;">🛠️ 進階系統設定</button>
             <div id="adminPanel" style="display:none; margin-top:10px;">
-                <input type="password" id="adminPassInput" placeholder="管理密碼"><button onclick="api.verifyAdmin()" class="btn-sm" style="background:var(--primary); color:white; width:100%;">驗證</button>
-                <div id="adminControls" style="display:none; margin-top:15px;">
+                <input type="password" id="adminPassInput" placeholder="請輸入管理密碼">
+                <button onclick="api.verifyAdmin()" class="btn-sm" style="background:var(--primary); color:white; width:100%;">驗證進入後台</button>
+                
+                <div id="adminControls" style="display:none; margin-top:20px; border-top:1px solid #ddd; padding-top:10px;">
                     <label>背景圖 URL：</label><input type="text" id="bgUrlInput" onchange="api.updateBg(this.value)">
-                    <button onclick="api.updateAdminConfig()" class="btn-sm" style="background:var(--primary); color:white; width:100%;">儲存變更</button>
+                    
+                    <div style="background:#e7f5ff; padding:15px; border-radius:14px; margin:10px 0;">
+                        <label><b>🔐 修改管理密碼</b></label>
+                        <input type="text" id="newPass" placeholder="新密碼">
+                        <label><b>💡 忘記密碼提示</b></label>
+                        <input type="text" id="newHint" placeholder="例如：我的生日">
+                        <button onclick="api.updateAdminConfig()" class="btn-sm" style="background:var(--primary); color:white; width:100%;">儲存密碼與提示</button>
+                    </div>
+
                     <hr><h4>💰 系統可用幣別</h4><div id="currencyList"></div>
-                    <div style="display:flex; gap:5px;"><input type="text" id="newCurName"><button onclick="api.addCurrency()" class="btn-sm">新增</button></div>
-                    <hr><button onclick="api.resetSystem()" style="background:#fff5f5; color:red; border:1px solid red; width:100%; padding:10px; border-radius:10px;">🔥 初始化資料</button>
+                    <div style="display:flex; gap:5px;"><input type="text" id="newCurName" placeholder="代碼 如 HKD"><button onclick="api.addCurrency()" class="btn-sm">新增</button></div>
+                    <hr><button onclick="api.resetSystem()" style="background:#fff5f5; color:red; border:1px solid red; width:100%; padding:10px; border-radius:10px;">🔥 初始化全系統資料</button>
                 </div>
             </div>
         </div>
@@ -106,7 +116,7 @@
     const flags = { "TWD": "TWD 🇹🇼", "JPY": "JPY 🇯🇵", "KRW": "KRW 🇰🇷", "USD": "USD 🇺🇸", "VND": "VND 👑", "HKD": "HKD 🇭🇰" };
     
     let currentTripId = "default", state = { title: "", members: [], bills: [], notice: "", tripCurrency: "TWD" }, 
-        sysConfig = { bgUrl: "", currencies: ["TWD", "JPY", "KRW"], adminPass: "0000", passHint: "0000" },
+        sysConfig = { bgUrl: "", currencies: ["TWD", "JPY", "KRW"], adminPass: "0000", passHint: "初始密碼為0000" },
         isMultiPayer = false, chartInstance = null;
 
     function handleBoxClick(e) { if(e.target.tagName === 'INPUT') return; const chk = e.currentTarget.querySelector('input[type="checkbox"]'); if(chk) chk.checked = !chk.checked; }
@@ -128,7 +138,7 @@
                 if(Math.abs(total - amount) > 0.1) return alert("代付總額不符！");
             }
             const splitBetween = Array.from(document.querySelectorAll('input[name="sMember"]:checked')).map(el => el.value);
-            if(Object.keys(payers).length === 0 || splitBetween.length === 0) return alert("要勾選人員！");
+            if(Object.keys(payers).length === 0 || splitBetween.length === 0) return alert("要勾選參與人員喔！");
             state.bills.push({ desc, amount, currency: state.tripCurrency, payers, splitBetween, time: `${new Date().getMonth()+1}/${new Date().getDate()} ${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2,'0')}` });
             api.saveState();
             document.getElementById('billDesc').value = ''; document.getElementById('billAmount').value = '';
@@ -146,10 +156,24 @@
         removeMember: (i) => { if(confirm("移除旅伴？")) { state.members.splice(i,1); api.saveState(); } },
         addCurrency: () => { const n = document.getElementById('newCurName').value.trim().toUpperCase(); if(n && !sysConfig.currencies.includes(n)) { sysConfig.currencies.push(n); api.saveConfig(); } },
         removeCurrency: (k) => { if(confirm(`不使用 ${k}？`)) { sysConfig.currencies = sysConfig.currencies.filter(c => c !== k); api.saveConfig(); } },
-        verifyAdmin: () => { if(document.getElementById('adminPassInput').value === sysConfig.adminPass) document.getElementById('adminControls').style.display = 'block'; else alert("密碼錯誤！"); },
-        updateAdminConfig: () => { api.saveConfig(); alert("已儲存！"); },
-        deleteTripArchive: (id) => { if(confirm("刪除歷史？")) { db.ref(`${DATA_ROOT}/archives/${id}`).remove(); db.ref(`${DATA_ROOT}/trips/${id}`).remove(); } },
-        resetSystem: () => { if(confirm("🔥 確定初始化？")) db.ref(DATA_ROOT).remove().then(()=>location.reload()); },
+        verifyAdmin: () => { 
+            if(document.getElementById('adminPassInput').value === sysConfig.adminPass) {
+                document.getElementById('adminControls').style.display = 'block';
+                document.getElementById('newPass').value = sysConfig.adminPass;
+                document.getElementById('newHint').value = sysConfig.passHint || "";
+            } else {
+                alert("密碼錯誤！\n提示：" + (sysConfig.passHint || "無提示"));
+            }
+        },
+        updateAdminConfig: () => { 
+            const p = document.getElementById('newPass').value, h = document.getElementById('newHint').value;
+            if(p) sysConfig.adminPass = p;
+            sysConfig.passHint = h;
+            api.saveConfig(); 
+            alert("安全性設定已更新！"); 
+        },
+        deleteTripArchive: (id) => { if(confirm("確定刪除這筆歷史？")) { db.ref(`${DATA_ROOT}/archives/${id}`).remove(); db.ref(`${DATA_ROOT}/trips/${id}`).remove(); } },
+        resetSystem: () => { if(confirm("🔥 確定初始化全系統資料？")) db.ref(DATA_ROOT).remove().then(()=>location.reload()); },
         updateBg: (url) => { sysConfig.bgUrl = url; api.saveConfig(); }
     };
 
